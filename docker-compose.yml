@@ -1,0 +1,66 @@
+version: '3.5'
+services:
+    bd:
+        image: mongo:latest
+        container_name: bd
+        ports:
+            - '27017'
+        volumes:
+            - data:/data/db
+            - config:/data/configdb
+    seeder:
+        image: mongo:latest
+        container_name: seeder
+        ports:
+            - '27017'
+        volumes:
+            - type: bind
+              source: ./mongodb
+              target: /mongodb
+        depends_on:
+            - bd
+        command: mongoimport --host bd:27017 --db bd --collection calls --drop --type json --file /mongodb/init.json --jsonArray
+    crud:
+        build: ./crud
+        container_name: crud
+        ports:
+            - '6000'
+        depends_on:
+            - bd
+    calls:
+        build: ./calls
+        container_name: calls
+        ports:
+            - '4000'
+        depends_on:
+            - bd
+    statistics:
+        build: ./statistics
+        container_name: statistics
+        ports:
+            - '5000'
+        depends_on:
+            - bd
+    gateway:
+        build: ./gateway
+        container_name: gateway
+        ports:
+            - '3000:3000'
+        expose:
+            - '3000'
+        depends_on:
+            - calls
+            - crud
+            - statistics
+    client:
+        build: ./client
+        container_name: client
+        ports:
+            - '8080:8080'
+        expose:
+            - '8080'
+        links:
+            - 'gateway'
+volumes:
+    data: {}
+    config: {}
